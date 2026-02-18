@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using BaltaDataAcess.Models;
 using Dapper;
 using Microsoft.Data.SqlClient;
@@ -16,12 +17,16 @@ namespace BaltaDataAcess
             using (var connection = new SqlConnection(connectionString))
             {
                 // CreateCategory(connection);
-                CreateManyCategory(connection);
+                // CreateManyCategory(connection);
                 // UpdateCategory(connection);
                 // ListCategories(connection);
                 // DeleteCategory(connection);
-                ListCategories(connection);
+                // ListCategories(connection);
                 // GetCategory(connection);
+                // ExecuteProcedure(connection);
+                // ExecuteReadProcedure(connection);
+                // ExecuteScalar(connection);
+                ReadView(connection);
             }
         }
         static void ListCategories(SqlConnection connection)
@@ -145,6 +150,75 @@ namespace BaltaDataAcess
                 }
             });
             Console.WriteLine($"{rows} Linhas inseridas");
+        }
+        static void ExecuteProcedure (SqlConnection connection)
+        {
+            var procedure = "spDeleteStudent";
+            var pars = new { StudentId = "1fdc7bc4-a758-479d-959a-b72ce911aaca" };
+            var affectrows = connection.Execute(
+                procedure, 
+                pars, 
+                commandType: CommandType.StoredProcedure);
+
+            Console.WriteLine($"{affectrows} Linhas afetadas");
+        }
+        static void ExecuteReadProcedure(SqlConnection connection)
+        {
+            var procedure = "spGetCoursesByCategory";
+            var pars = new { CategoryId = "09ce0b7b-cfca-497b-92c0-3290ad9d5142" };
+            var courses = connection.Query(
+                procedure,
+                pars,
+                commandType: CommandType.StoredProcedure);
+
+            foreach (var item in courses)
+            {
+                Console.WriteLine(item.Id);
+            }
+        }
+        static void ExecuteScalar (SqlConnection connection)
+        {
+            var category = new Category();
+
+            category.Title = "Amazon AWS";
+            category.Url = "amazon";
+            category.Description = "Categoria destinada a serviçoes AWS";
+            category.Order = 8;
+            category.Summary = "AWS Cloud";
+            category.Featured = false;
+
+            var insertSql = @"
+                INSERT INTO 
+                    [Category] 
+                OUTPUT inserted.[Id]
+                VALUES(
+                    NEWID(), 
+                    @Title,
+                    @Url,
+                    @Summary, 
+                    @Order, 
+                    @Description, 
+                    @Featured)";
+
+            var id = connection.ExecuteScalar<Guid>(insertSql, new
+            {
+                category.Title,
+                category.Url,
+                category.Summary,
+                category.Order,
+                category.Description,
+                category.Featured,
+            });
+            Console.WriteLine($"A categoria inserida foi: {id}");
+        }
+        static void ReadView(SqlConnection connection)
+        {
+            var sql = "SELECT * FROM [vwCourses]";
+            var courses = connection.Query(sql);
+            foreach (var item in courses)
+            {
+                Console.WriteLine($"{item.Id} - {item.Title}");
+            }
         }
     }
 }
